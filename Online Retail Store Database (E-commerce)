@@ -1,0 +1,64 @@
+1. Create Database
+CREATE DATABASE online_retail;
+USE online_retail;
+
+2. Create Tables
+CREATE TABLE customers (
+  customer_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100) UNIQUE,
+  location VARCHAR(50)
+);
+
+CREATE TABLE products (
+  product_id INT AUTO_INCREMENT PRIMARY KEY,
+  product_name VARCHAR(100),
+  price DECIMAL(10,2),
+  stock INT
+);
+
+CREATE TABLE orders (
+  order_id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_id INT,
+  order_date DATE,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+CREATE TABLE order_items (
+  order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT,
+  product_id INT,
+  quantity INT,
+  FOREIGN KEY (order_id) REFERENCES orders(order_id),
+  FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE payments (
+  payment_id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT,
+  amount DECIMAL(10,2),
+  status VARCHAR(20),
+  FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
+3. Add a Trigger (Auto-update stock)
+CREATE TRIGGER reduce_stock AFTER INSERT ON order_items
+FOR EACH ROW
+UPDATE products SET stock = stock - NEW.quantity
+WHERE product_id = NEW.product_id;
+
+4. Stored Procedure (Get customer order summary)
+DELIMITER //
+CREATE PROCEDURE customer_orders(IN cid INT)
+BEGIN
+    SELECT o.order_id, o.order_date, SUM(oi.quantity * p.price) AS total_amount
+    FROM orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+    JOIN products p ON oi.product_id = p.product_id
+    WHERE o.customer_id = cid
+    GROUP BY o.order_id;
+END //
+DELIMITER ;
+
+5. Sample Query
+CALL customer_orders(1);
